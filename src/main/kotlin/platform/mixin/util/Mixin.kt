@@ -26,6 +26,8 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.INVOKER
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.MIXIN
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.CALLBACK_INFO
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.CALLBACK_INFO_RETURNABLE
+import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.JUMP_INFO
+import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.JUMP_INFO_COMPLEX
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.LOCAL_REF_PACKAGE
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.OPERATION
 import com.demonwav.mcdev.util.SemanticVersion
@@ -146,6 +148,12 @@ val PsiClass.isAccessorMixin: Boolean
 val PsiParameter.isMixinExtrasSugar: Boolean
     get() {
         return annotations.any { it.qualifiedName?.contains(".mixinextras.sugar.") == true }
+    }
+
+val PsiType.isJumpInfo: Boolean
+    get() {
+        val name = PsiTypesUtil.getPsiClass(this)?.qualifiedName ?: return false
+        return name == JUMP_INFO || name == JUMP_INFO_COMPLEX
     }
 
 val PsiType.isLocalRef: Boolean
