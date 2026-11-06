@@ -96,9 +96,9 @@ class IncorrectJumpStackTypeInspection : MixinInspection() {
             val expectedType = parameter.type
 
             for (target in targets) {
-                val frames = AsmDfaUtil.getStackTypes(holder.project, target.method.clazz, target.method.method, target.result.insn) ?: continue
+                val targetStack = AsmDfaUtil.getStackTypes(holder.project, target.method.clazz, target.method.method, target.result.insn) ?: continue
 
-                if (stackIndex !in frames.indices) {
+                if (stackIndex !in targetStack.indices) {
                     holder.registerProblem(
                         stackAnnotation.nameReferenceElement ?: stackAnnotation,
                         "Out of bounds stack index"
@@ -106,7 +106,7 @@ class IncorrectJumpStackTypeInspection : MixinInspection() {
                     return
                 }
 
-                val actualType = frames[stackIndex]?.toPsiType(JavaPsiFacade.getElementFactory(holder.project))?.wrapStackRef(holder.project)
+                val actualType = targetStack[stackIndex]?.toPsiType(JavaPsiFacade.getElementFactory(holder.project))?.wrapStackRef(holder.project)
 
                 if (actualType != null && expectedType != actualType) {
                     holder.registerProblem(
