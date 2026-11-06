@@ -48,7 +48,7 @@ class JumpNonJumpInfoInspection : MixinInspection() {
             val parameter = annotation.parent?.parent as? PsiParameter ?: return
             val typeElement = parameter.typeElement ?: return
 
-            if (!parameter.type.isStackRef) {
+            if (!parameter.type.isJumpInfo) {
                 holder.registerProblem(
                     typeElement,
                     "@Jump parameter must be of type JumpInfo",

@@ -30,6 +30,7 @@ import com.demonwav.mcdev.platform.mixin.util.LocalInfo
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.mixinTargets
 import com.demonwav.mcdev.platform.mixin.util.unwrapLocalRef
+import com.demonwav.mcdev.platform.mixin.util.unwrapStackRef
 import com.demonwav.mcdev.util.cached
 import com.demonwav.mcdev.util.constantValue
 import com.demonwav.mcdev.util.findAnnotations
@@ -92,7 +93,7 @@ class UnresolvedLocalCaptureInspection : MixinInspection() {
 
             val module = method.findModule() ?: return
 
-            val localInfo = LocalInfo.fromAnnotation(parameter.type.unwrapLocalRef(), localAnnotation)
+            val localInfo = LocalInfo.fromAnnotation(parameter.type.unwrapStackRef() ?: parameter.type.unwrapLocalRef(), localAnnotation)
 
             for (target in targets) {
                 val matchingLocals = localInfo.matchLocals(

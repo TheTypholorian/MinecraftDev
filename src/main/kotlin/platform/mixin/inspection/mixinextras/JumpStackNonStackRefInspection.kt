@@ -41,7 +41,7 @@ class JumpStackNonStackRefInspection : MixinInspection() {
 
     override fun buildVisitor(holder: ProblemsHolder) = object : JavaElementVisitor() {
         override fun visitAnnotation(annotation: PsiAnnotation) {
-            if (!annotation.hasQualifiedName(MixinConstants.MixinExtras.SHARE)) {
+            if (!annotation.hasQualifiedName(MixinConstants.MixinExtras.JUMP_STACK)) {
                 return
             }
 
@@ -52,13 +52,13 @@ class JumpStackNonStackRefInspection : MixinInspection() {
                 holder.registerProblem(
                     typeElement,
                     "@JumpStack parameter must be of type StackRef",
-                    ReplaceWithLocalRefFix(typeElement),
+                    ReplaceWithStackRefFix(typeElement),
                 )
             }
         }
     }
 
-    private class ReplaceWithLocalRefFix(typeElement: PsiTypeElement) : LocalQuickFixOnPsiElement(typeElement) {
+    private class ReplaceWithStackRefFix(typeElement: PsiTypeElement) : LocalQuickFixOnPsiElement(typeElement) {
         override fun getText() = "Replace with StackRef"
 
         override fun getFamilyName() = "Replace with StackRef"

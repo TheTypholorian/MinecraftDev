@@ -163,6 +163,27 @@ val PsiType.isStackRef: Boolean
         return name.substring(0, name.lastIndexOf('.') + 1) == JUMP_STACK_REF_PACKAGE
     }
 
+fun PsiType.unwrapStackRef(): PsiType? {
+    if (this !is PsiClassType) {
+        return null
+    }
+    val qName = resolve()?.qualifiedName ?: return null
+    if (qName.substring(0, qName.lastIndexOf('.') + 1) != JUMP_STACK_REF_PACKAGE) {
+        return null
+    }
+    return when (qName.substringAfterLast('.')) {
+        "BooleanStackRef" -> PsiTypes.booleanType()
+        "CharStackRef" -> PsiTypes.charType()
+        "DoubleStackRef" -> PsiTypes.doubleType()
+        "FloatStackRef" -> PsiTypes.floatType()
+        "IntStackRef" -> PsiTypes.intType()
+        "LongStackRef" -> PsiTypes.longType()
+        "ShortStackRef" -> PsiTypes.shortType()
+        "StackRef" -> parameters.getOrNull(0) ?: this
+        else -> this
+    }
+}
+
 val PsiType.isLocalRef: Boolean
     get() {
         val name = PsiTypesUtil.getPsiClass(this)?.qualifiedName ?: return false
@@ -174,18 +195,18 @@ fun PsiType.unwrapLocalRef(): PsiType {
         return this
     }
     val qName = resolve()?.qualifiedName ?: return this
-    if (!qName.startsWith(LOCAL_REF_PACKAGE)) {
+    if (qName.substring(0, qName.lastIndexOf('.') + 1) != LOCAL_REF_PACKAGE) {
         return this
     }
     return when (qName.substringAfterLast('.')) {
-        "LocalBooleanRef", "BooleanStackRef" -> PsiTypes.booleanType()
-        "LocalCharRef", "CharStackRef" -> PsiTypes.charType()
-        "LocalDoubleRef", "DoubleStackRef" -> PsiTypes.doubleType()
-        "LocalFloatRef", "FloatStackRef" -> PsiTypes.floatType()
-        "LocalIntRef", "IntStackRef" -> PsiTypes.intType()
-        "LocalLongRef", "LongStackRef" -> PsiTypes.longType()
-        "LocalShortRef", "ShortStackRef" -> PsiTypes.shortType()
-        "LocalRef", "StackRef" -> parameters.getOrNull(0) ?: this
+        "LocalBooleanRef" -> PsiTypes.booleanType()
+        "LocalCharRef" -> PsiTypes.charType()
+        "LocalDoubleRef" -> PsiTypes.doubleType()
+        "LocalFloatRef" -> PsiTypes.floatType()
+        "LocalIntRef" -> PsiTypes.intType()
+        "LocalLongRef" -> PsiTypes.longType()
+        "LocalShortRef" -> PsiTypes.shortType()
+        "LocalRef" -> parameters.getOrNull(0) ?: this
         else -> this
     }
 }
@@ -196,7 +217,7 @@ fun PsiType.wrapLocalRef(project: Project): PsiType {
     }
 
     if (isStackRef) {
-        return unwrapLocalRef().wrapLocalRef(project)
+        return unwrapStackRef()!!.wrapLocalRef(project)
     }
 
     val elementFactory = JavaPsiFacade.getElementFactory(project)

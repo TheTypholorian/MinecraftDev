@@ -28,6 +28,7 @@ import com.demonwav.mcdev.platform.mixin.inspection.injector.ModifyVariableArgsO
 import com.demonwav.mcdev.platform.mixin.util.LocalInfo
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.unwrapLocalRef
+import com.demonwav.mcdev.platform.mixin.util.unwrapStackRef
 import com.demonwav.mcdev.util.constantValue
 import com.demonwav.mcdev.util.mapFirstNotNull
 import com.intellij.codeInspection.ProblemsHolder
@@ -57,7 +58,7 @@ class LocalArgsOnlyInspection : MixinInspection() {
                 (MixinAnnotationHandler.forMixinAnnotation(annotation, holder.project) as? InsnInjectorAnnotationHandler)?.let { it to annotation }
             } ?: return
 
-            val localType = parameter.type.unwrapLocalRef()
+            val localType = parameter.type.unwrapStackRef() ?: parameter.type.unwrapLocalRef()
             val localInfo = LocalInfo.fromAnnotation(localType, localAnnotation)
 
             if (ModifyVariableArgsOnlyInspection.Util.shouldReport(localInfo, injector, injectorAnnotation)) {

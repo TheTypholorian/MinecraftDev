@@ -28,6 +28,7 @@ import com.demonwav.mcdev.platform.mixin.inspection.injector.ModifyVariableMayUs
 import com.demonwav.mcdev.platform.mixin.util.LocalInfo
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.unwrapLocalRef
+import com.demonwav.mcdev.platform.mixin.util.unwrapStackRef
 import com.demonwav.mcdev.util.mapFirstNotNull
 import com.intellij.codeInsight.intention.LowPriorityAction
 import com.intellij.codeInspection.LocalQuickFix
@@ -64,7 +65,7 @@ class LocalMayUseNameInspection : MixinInspection() {
             val parameter = localAnnotation.parentOfType<PsiParameter>() ?: return
             val method = parameter.declarationScope as? PsiMethod ?: return
 
-            val localType = parameter.type.unwrapLocalRef()
+            val localType = parameter.type.unwrapStackRef() ?: parameter.type.unwrapLocalRef()
             val localInfo = LocalInfo.fromAnnotation(localType, localAnnotation)
 
             if (ignoreForImplicitLocals && localInfo.isImplicit) {
