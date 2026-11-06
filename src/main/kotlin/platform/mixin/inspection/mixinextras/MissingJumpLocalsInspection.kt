@@ -33,6 +33,7 @@ import com.demonwav.mcdev.platform.mixin.util.mixinTargets
 import com.demonwav.mcdev.platform.mixin.util.toPsiType
 import com.demonwav.mcdev.platform.mixin.util.unwrapLocalRef
 import com.demonwav.mcdev.platform.mixin.util.unwrapStackRef
+import com.demonwav.mcdev.util.addAnnotation
 import com.demonwav.mcdev.util.cached
 import com.demonwav.mcdev.util.constantValue
 import com.demonwav.mcdev.util.findAnnotations
@@ -40,12 +41,22 @@ import com.demonwav.mcdev.util.findContainingClass
 import com.demonwav.mcdev.util.findContainingMethod
 import com.demonwav.mcdev.util.findModule
 import com.demonwav.mcdev.util.mapFirstNotNull
+import com.intellij.codeInsight.intention.FileModifier
+import com.intellij.codeInspection.LocalQuickFix
+import com.intellij.codeInspection.LocalQuickFixOnPsiElement
+import com.intellij.codeInspection.ProblemDescriptor
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiType
+import com.intellij.psi.PsiTypeElement
 import com.intellij.psi.util.PsiModificationTracker
 
 class MissingJumpLocalsInspection : MixinInspection() {
@@ -57,6 +68,7 @@ class MissingJumpLocalsInspection : MixinInspection() {
                 return
             }
 
+            val parameter = jumpAnnotation.parent?.parent as? PsiParameter ?: return
             val method = jumpAnnotation.findContainingMethod() ?: return
             val module = method.findModule() ?: return
             val jumps = method.parameterList.parameters.mapNotNull { it.getAnnotation(MixinConstants.MixinExtras.JUMP) }
@@ -127,7 +139,36 @@ class MissingJumpLocalsInspection : MixinInspection() {
             }
 
             if (localsToAdd.isNotEmpty()) {
-                // TODO quick fix
+                holder.registerProblem(
+                    jumpAnnotation.nameReferenceElement ?: jumpAnnotation,
+                    "Missing jump locals",
+                    InjectMissingLocalsQuickFix(localsToAdd, parameter)
+                )
+            }
+        }
+    }
+
+    private class InjectMissingLocalsQuickFix(
+        @FileModifier.SafeFieldForPreview
+        private val localsToAdd: Map<Int, PsiType>,
+        parameter: PsiParameter
+    ) : LocalQuickFixOnPsiElement(parameter) {
+        override fun getFamilyName() = "Add needed jump locals"
+
+        override fun getText() = "Add needed jump locals"
+
+        override fun invoke(project: Project, psiFile: PsiFile, startElement: PsiElement, endElement: PsiElement) {
+            val parameter = startElement as? PsiParameter ?: return
+            val method = parameter.findContainingMethod() ?: return
+
+            val factory = JavaPsiFacade.getElementFactory(project)
+            val parameters = localsToAdd.map { (key, type) ->
+                factory.createParameter("local$key", type).also {
+                    it.addAnnotation("${MixinConstants.MixinExtras.LOCAL}(jump = $key)")
+                }
+            }
+            parameters.fold(parameter as PsiElement) { accum, parameter ->
+                method.parameterList.addAfter(parameter, accum)
             }
         }
     }
