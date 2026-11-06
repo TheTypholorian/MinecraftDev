@@ -42,7 +42,7 @@ class IllegalJumpIndexInspection : MixinInspection() {
 
             val parameter = localAnnotation.parentOfType<PsiParameter>() ?: return
             val method = parameter.findContainingMethod() ?: return
-            val jumpIndex = localAnnotation.findDeclaredAttributeValue("jump")?.constantValue as? Int
+            val jumpIndex = (if (localAnnotation.qualifiedName == MixinConstants.MixinExtras.JUMP_STACK) localAnnotation.findAttributeValue("jump") else localAnnotation.findDeclaredAttributeValue("jump"))?.constantValue as? Int ?: return
             val jumps = method.parameterList.parameters.mapNotNull { it.getAnnotation(MixinConstants.MixinExtras.JUMP) }
 
             if (jumpIndex != null && jumpIndex !in jumps.indices) {

@@ -67,7 +67,7 @@ class IncorrectJumpStackTypeInspection : MixinInspection() {
 
             val parameter = stackAnnotation.parentOfType<PsiParameter>() ?: return
             val method = parameter.findContainingMethod() ?: return
-            val jumpIndex = stackAnnotation.findDeclaredAttributeValue("jump")?.constantValue as? Int ?: return
+            val jumpIndex = stackAnnotation.findAttributeValue("jump")?.constantValue as? Int ?: return
             val stackIndex = stackAnnotation.findDeclaredAttributeValue("index")?.constantValue as? Int ?: return
             val jumps = method.parameterList.parameters.mapNotNull { it.getAnnotation(MixinConstants.MixinExtras.JUMP) }
             val jumpAnnotation = jumps.getOrNull(jumpIndex) ?: return
