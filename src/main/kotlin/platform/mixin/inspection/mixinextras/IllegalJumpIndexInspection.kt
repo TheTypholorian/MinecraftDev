@@ -45,7 +45,7 @@ class IllegalJumpIndexInspection : MixinInspection() {
             val jumpIndex = (if (localAnnotation.qualifiedName == MixinConstants.MixinExtras.JUMP_STACK) localAnnotation.findAttributeValue("jump") else localAnnotation.findDeclaredAttributeValue("jump"))?.constantValue as? Int ?: return
             val jumps = method.parameterList.parameters.mapNotNull { it.getAnnotation(MixinConstants.MixinExtras.JUMP) }
 
-            if (jumpIndex != null && jumpIndex !in jumps.indices) {
+            if (jumpIndex !in jumps.indices) {
                 holder.registerProblem(
                     localAnnotation.nameReferenceElement ?: localAnnotation,
                     "@${localAnnotation.qualifiedName!!.substringAfterLast('.')} requests a nonexistent jump (must be in range [0, ${jumps.size}) but got $jumpIndex)"
