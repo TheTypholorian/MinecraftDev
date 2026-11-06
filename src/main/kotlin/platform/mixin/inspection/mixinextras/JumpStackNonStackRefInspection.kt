@@ -22,8 +22,8 @@ package com.demonwav.mcdev.platform.mixin.inspection.mixinextras
 
 import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
-import com.demonwav.mcdev.platform.mixin.util.isJumpInfo
-import com.demonwav.mcdev.util.findAnnotations
+import com.demonwav.mcdev.platform.mixin.util.isStackRef
+import com.demonwav.mcdev.platform.mixin.util.wrapStackRef
 import com.intellij.codeInspection.LocalQuickFixOnPsiElement
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.openapi.project.Project
@@ -35,34 +35,33 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiTypeElement
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
-import com.intellij.psi.util.PsiTypesUtil
 
-class JumpNonJumpInfoComplexInspection : MixinInspection() {
-    override fun getStaticDescription() = "Reports when a complex @Jump parameter isn't of type JumpInfoComplex"
+class JumpStackNonStackRefInspection : MixinInspection() {
+    override fun getStaticDescription() = "Reports when a @JumpStack parameter is of a non-StackRef type"
 
     override fun buildVisitor(holder: ProblemsHolder) = object : JavaElementVisitor() {
         override fun visitAnnotation(annotation: PsiAnnotation) {
-            if (!annotation.hasQualifiedName(MixinConstants.MixinExtras.JUMP)) {
+            if (!annotation.hasQualifiedName(MixinConstants.MixinExtras.SHARE)) {
                 return
             }
 
             val parameter = annotation.parent?.parent as? PsiParameter ?: return
             val typeElement = parameter.typeElement ?: return
 
-            if (annotation.findDeclaredAttributeValue("localsToModify")?.findAnnotations()?.isNotEmpty() == true && PsiTypesUtil.getPsiClass(parameter.type)?.qualifiedName == MixinConstants.MixinExtras.JUMP_INFO) {
+            if (!parameter.type.isStackRef) {
                 holder.registerProblem(
                     typeElement,
-                    "Complex @Jump parameter must be of type JumpInfoComplex",
-                    ReplaceWithJumpInfoFix(typeElement),
+                    "@JumpStack parameter must be of type StackRef",
+                    ReplaceWithLocalRefFix(typeElement),
                 )
             }
         }
     }
 
-    private class ReplaceWithJumpInfoFix(typeElement: PsiTypeElement) : LocalQuickFixOnPsiElement(typeElement) {
-        override fun getText() = "Replace with JumpInfoComplex"
+    private class ReplaceWithLocalRefFix(typeElement: PsiTypeElement) : LocalQuickFixOnPsiElement(typeElement) {
+        override fun getText() = "Replace with StackRef"
 
-        override fun getFamilyName() = "Replace with JumpInfoComplex"
+        override fun getFamilyName() = "Replace with StackRef"
 
         override fun invoke(
             project: Project,
@@ -71,7 +70,7 @@ class JumpNonJumpInfoComplexInspection : MixinInspection() {
             endElement: PsiElement
         ) {
             val typeElement = startElement as? PsiTypeElement ?: return
-            val newTypeElement = JavaPsiFacade.getElementFactory(project).createTypeElement(JavaPsiFacade.getElementFactory(project).createTypeByFQClassName(MixinConstants.MixinExtras.JUMP_INFO_COMPLEX))
+            val newTypeElement = JavaPsiFacade.getElementFactory(project).createTypeElement(typeElement.type.wrapStackRef(project))
             val elementToReformat = typeElement.replace(newTypeElement)
             JavaCodeStyleManager.getInstance(project).shortenClassReferences(elementToReformat)
         }

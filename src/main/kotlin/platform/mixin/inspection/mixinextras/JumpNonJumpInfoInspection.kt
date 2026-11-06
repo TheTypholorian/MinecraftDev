@@ -23,7 +23,7 @@ package com.demonwav.mcdev.platform.mixin.inspection.mixinextras
 import com.demonwav.mcdev.platform.mixin.inspection.MixinInspection
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.isJumpInfo
-import com.demonwav.mcdev.util.findAnnotations
+import com.demonwav.mcdev.platform.mixin.util.isStackRef
 import com.intellij.codeInspection.LocalQuickFixOnPsiElement
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.openapi.project.Project
@@ -48,10 +48,10 @@ class JumpNonJumpInfoInspection : MixinInspection() {
             val parameter = annotation.parent?.parent as? PsiParameter ?: return
             val typeElement = parameter.typeElement ?: return
 
-            if (!parameter.type.isJumpInfo) {
+            if (!parameter.type.isStackRef) {
                 holder.registerProblem(
                     typeElement,
-                    "@Jump parameter must be of type JumpInfo or JumpInfoComplex",
+                    "@Jump parameter must be of type JumpInfo",
                     ReplaceWithJumpInfoFix(typeElement),
                 )
             }
@@ -70,13 +70,7 @@ class JumpNonJumpInfoInspection : MixinInspection() {
             endElement: PsiElement
         ) {
             val typeElement = startElement as? PsiTypeElement ?: return
-
-            val parameter = typeElement.parent as? PsiParameter ?: return
-            val jumpAnnotation = parameter.getAnnotation(MixinConstants.MixinExtras.JUMP) ?: return
-            val complex = jumpAnnotation.findDeclaredAttributeValue("localsToModify")?.findAnnotations()?.isNotEmpty() == true
-            val type = if (complex) MixinConstants.MixinExtras.JUMP_INFO_COMPLEX else MixinConstants.MixinExtras.JUMP_INFO
-
-            val newTypeElement = JavaPsiFacade.getElementFactory(project).createTypeElement(JavaPsiFacade.getElementFactory(project).createTypeByFQClassName(type))
+            val newTypeElement = JavaPsiFacade.getElementFactory(project).createTypeElement(JavaPsiFacade.getElementFactory(project).createTypeByFQClassName(MixinConstants.MixinExtras.JUMP_INFO))
             val elementToReformat = typeElement.replace(newTypeElement)
             JavaCodeStyleManager.getInstance(project).shortenClassReferences(elementToReformat)
         }

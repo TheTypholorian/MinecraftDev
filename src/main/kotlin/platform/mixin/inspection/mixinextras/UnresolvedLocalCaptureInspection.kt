@@ -20,7 +20,6 @@
 
 package com.demonwav.mcdev.platform.mixin.inspection.mixinextras
 
-import com.demonwav.mcdev.platform.mixin.handlers.DefaultInjectorAnnotationHandler.resolveInstructions
 import com.demonwav.mcdev.platform.mixin.handlers.InjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.InsnInjectorAnnotationHandler
 import com.demonwav.mcdev.platform.mixin.handlers.MixinAnnotationHandler
@@ -32,19 +31,17 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants
 import com.demonwav.mcdev.platform.mixin.util.mixinTargets
 import com.demonwav.mcdev.platform.mixin.util.unwrapLocalRef
 import com.demonwav.mcdev.util.cached
+import com.demonwav.mcdev.util.constantValue
 import com.demonwav.mcdev.util.findAnnotations
 import com.demonwav.mcdev.util.findContainingClass
 import com.demonwav.mcdev.util.findContainingMethod
 import com.demonwav.mcdev.util.findModule
-import com.demonwav.mcdev.util.ifNullOrEmpty
 import com.demonwav.mcdev.util.mapFirstNotNull
-import com.demonwav.mcdev.util.resolveType
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiParameter
-import com.intellij.psi.PsiType
 import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.parentOfType
 
@@ -59,11 +56,11 @@ class UnresolvedLocalCaptureInspection : MixinInspection() {
 
             val parameter = localAnnotation.parentOfType<PsiParameter>() ?: return
             val method = parameter.findContainingMethod() ?: return
-            var localType: PsiType? = parameter.type.unwrapLocalRef()
-            val jumpAnnotation = localAnnotation.parentOfType<PsiAnnotation>()
+            val jumpIndex = localAnnotation.findDeclaredAttributeValue("jump")?.constantValue as? Int
+            val jumps = method.parameterList.parameters.mapNotNull { it.getAnnotation(MixinConstants.MixinExtras.JUMP) }
 
-            val targets = if (jumpAnnotation != null && jumpAnnotation.qualifiedName == MixinConstants.MixinExtras.JUMP) {
-                localType = localAnnotation.findDeclaredAttributeValue("type")?.resolveType()
+            val targets = if (jumpIndex != null && jumpIndex in jumps.indices) {
+                val jumpAnnotation = jumps[jumpIndex]
                 method.annotations.mapFirstNotNull { annotation ->
                     annotation.cached(PsiModificationTracker.MODIFICATION_COUNT) {
                         val handler = MixinAnnotationHandler.forMixinAnnotation(annotation, holder.project) as? InjectorAnnotationHandler ?: return@cached emptyList()
@@ -95,7 +92,7 @@ class UnresolvedLocalCaptureInspection : MixinInspection() {
 
             val module = method.findModule() ?: return
 
-            val localInfo = LocalInfo.fromAnnotation(localType, localAnnotation)
+            val localInfo = LocalInfo.fromAnnotation(parameter.type.unwrapLocalRef(), localAnnotation)
 
             for (target in targets) {
                 val matchingLocals = localInfo.matchLocals(

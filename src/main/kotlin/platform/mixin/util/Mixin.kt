@@ -27,9 +27,10 @@ import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Annotations.MIXIN
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.CALLBACK_INFO
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.Classes.CALLBACK_INFO_RETURNABLE
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.JUMP_INFO
-import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.JUMP_INFO_COMPLEX
+import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.JUMP_STACK_REF_PACKAGE
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.LOCAL_REF_PACKAGE
 import com.demonwav.mcdev.platform.mixin.util.MixinConstants.MixinExtras.OPERATION
+import com.demonwav.mcdev.platform.mixin.util.isStackRef
 import com.demonwav.mcdev.util.SemanticVersion
 import com.demonwav.mcdev.util.cached
 import com.demonwav.mcdev.util.computeStringArray
@@ -153,12 +154,19 @@ val PsiParameter.isMixinExtrasSugar: Boolean
 val PsiType.isJumpInfo: Boolean
     get() {
         val name = PsiTypesUtil.getPsiClass(this)?.qualifiedName ?: return false
-        return name == JUMP_INFO || name == JUMP_INFO_COMPLEX
+        return name == JUMP_INFO
+    }
+
+val PsiType.isStackRef: Boolean
+    get() {
+        val name = PsiTypesUtil.getPsiClass(this)?.qualifiedName ?: return false
+        return name.substring(0, name.lastIndexOf('.') + 1) == JUMP_STACK_REF_PACKAGE
     }
 
 val PsiType.isLocalRef: Boolean
     get() {
-        return PsiTypesUtil.getPsiClass(this)?.qualifiedName?.startsWith(LOCAL_REF_PACKAGE) == true
+        val name = PsiTypesUtil.getPsiClass(this)?.qualifiedName ?: return false
+        return name.substring(0, name.lastIndexOf('.') + 1) == LOCAL_REF_PACKAGE
     }
 
 fun PsiType.unwrapLocalRef(): PsiType {
@@ -170,14 +178,14 @@ fun PsiType.unwrapLocalRef(): PsiType {
         return this
     }
     return when (qName.substringAfterLast('.')) {
-        "LocalBooleanRef" -> PsiTypes.booleanType()
-        "LocalCharRef" -> PsiTypes.charType()
-        "LocalDoubleRef" -> PsiTypes.doubleType()
-        "LocalFloatRef" -> PsiTypes.floatType()
-        "LocalIntRef" -> PsiTypes.intType()
-        "LocalLongRef" -> PsiTypes.longType()
-        "LocalShortRef" -> PsiTypes.shortType()
-        "LocalRef" -> parameters.getOrNull(0) ?: this
+        "LocalBooleanRef", "BooleanStackRef" -> PsiTypes.booleanType()
+        "LocalCharRef", "CharStackRef" -> PsiTypes.charType()
+        "LocalDoubleRef", "DoubleStackRef" -> PsiTypes.doubleType()
+        "LocalFloatRef", "FloatStackRef" -> PsiTypes.floatType()
+        "LocalIntRef", "IntStackRef" -> PsiTypes.intType()
+        "LocalLongRef", "LongStackRef" -> PsiTypes.longType()
+        "LocalShortRef", "ShortStackRef" -> PsiTypes.shortType()
+        "LocalRef", "StackRef" -> parameters.getOrNull(0) ?: this
         else -> this
     }
 }
@@ -185,6 +193,10 @@ fun PsiType.unwrapLocalRef(): PsiType {
 fun PsiType.wrapLocalRef(project: Project): PsiType {
     if (isLocalRef) {
         return this
+    }
+
+    if (isStackRef) {
+        return unwrapLocalRef().wrapLocalRef(project)
     }
 
     val elementFactory = JavaPsiFacade.getElementFactory(project)
@@ -198,6 +210,35 @@ fun PsiType.wrapLocalRef(project: Project): PsiType {
         PsiTypes.shortType() -> elementFactory.createTypeByFQClassName(LOCAL_REF_PACKAGE + "LocalShortRef")
         else -> {
             val typeElement = elementFactory.createTypeElementFromText(LOCAL_REF_PACKAGE + "LocalRef<?>", null)
+            typeElement.innermostComponentReferenceElement!!
+                .parameterList!!
+                .typeParameterElements[0]!!
+                .replace(elementFactory.createTypeElement(this))
+            typeElement.type
+        }
+    }
+}
+
+fun PsiType.wrapStackRef(project: Project): PsiType {
+    if (isLocalRef) {
+        return unwrapLocalRef().wrapStackRef(project)
+    }
+
+    if (isStackRef) {
+        return this
+    }
+
+    val elementFactory = JavaPsiFacade.getElementFactory(project)
+    return when (this) {
+        PsiTypes.booleanType() -> elementFactory.createTypeByFQClassName(JUMP_STACK_REF_PACKAGE + "BooleanStackRef")
+        PsiTypes.charType() -> elementFactory.createTypeByFQClassName(JUMP_STACK_REF_PACKAGE + "CharStackRef")
+        PsiTypes.doubleType() -> elementFactory.createTypeByFQClassName(JUMP_STACK_REF_PACKAGE + "DoubleStackRef")
+        PsiTypes.floatType() -> elementFactory.createTypeByFQClassName(JUMP_STACK_REF_PACKAGE + "FloatStackRef")
+        PsiTypes.intType() -> elementFactory.createTypeByFQClassName(JUMP_STACK_REF_PACKAGE + "IntStackRef")
+        PsiTypes.longType() -> elementFactory.createTypeByFQClassName(JUMP_STACK_REF_PACKAGE + "LongStackRef")
+        PsiTypes.shortType() -> elementFactory.createTypeByFQClassName(JUMP_STACK_REF_PACKAGE + "ShortStackRef")
+        else -> {
+            val typeElement = elementFactory.createTypeElementFromText(JUMP_STACK_REF_PACKAGE + "StackRef<?>", null)
             typeElement.innermostComponentReferenceElement!!
                 .parameterList!!
                 .typeParameterElements[0]!!
